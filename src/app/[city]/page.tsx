@@ -8,7 +8,7 @@ import {
 } from '@/lib/cities';
 import { getShowsByCity, getVenuesByCity } from '@/lib/queries';
 import ShowGrid from '@/app/components/ShowGrid';
-import MiniPlayer, { type PlaylistItem } from '@/app/components/MiniPlayer';
+import type { PlaylistItem } from '@/app/components/MiniPlayer';
 
 export const dynamic = 'force-dynamic';
 
@@ -200,8 +200,6 @@ export default async function CityPage({
         filterBar={filterBar}
       />
 
-      {/* Floating preview jukebox — no auth required */}
-      <MiniPlayer playlist={playlist} />
     </>
   );
 }

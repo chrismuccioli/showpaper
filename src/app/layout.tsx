@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import MiniPlayer from '@/app/components/MiniPlayer';
 
 export const metadata: Metadata = {
   title: "Showpaper",
@@ -35,6 +36,8 @@ export default function RootLayout({
         <div style={{ maxWidth: 860, margin: '0 auto', padding: '8px 10px' }}>
           {children}
         </div>
+        {/* Global player — listens for play events from any page */}
+        <MiniPlayer playlist={[]} />
       </body>
     </html>
   );
