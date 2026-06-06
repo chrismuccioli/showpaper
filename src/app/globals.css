@@ -37,6 +37,16 @@ input, select, textarea, button {
 }
 .result-row:hover { background: #bacff2; }
 
+/* Play button hover on thumbnail */
+.show-thumb { position: relative; }
+.show-thumb .play-btn { opacity: 0; transition: opacity 0.15s, background 0.15s; }
+.result-row:hover .play-btn { opacity: 1 !important; background: rgba(0,0,0,0.55) !important; }
+
+@keyframes sp-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
 /* Hover for show-list tables on artist/venue pages */
 .show-table tr:hover { background: #f7f7f7; }
 .show-table tr { border-bottom: 1px solid #eee; }

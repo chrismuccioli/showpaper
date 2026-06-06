@@ -120,12 +120,6 @@ export default function MiniPlayer({ playlist }: { playlist: PlaylistItem[] }) {
           </div>
         </div>
 
-        <style>{`
-          @keyframes sp-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.8)} }
-          .show-thumb { position: relative; }
-          .show-thumb .play-btn { opacity: 0; }
-          .result-row:hover .play-btn { opacity: 1 !important; background: rgba(0,0,0,0.55) !important; }
-        `}</style>
       </div>
     </>
   );
