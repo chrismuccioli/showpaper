@@ -111,8 +111,8 @@ export async function POST(request: Request) {
       }
     }
 
-    const totalInserted = results.reduce((s, r) => s + (r.inserted ?? 0), 0);
-    const totalSkipped = results.reduce((s, r) => s + (r.skipped ?? 0), 0);
+    const totalInserted = results.reduce((s, r) => s + ('inserted' in r ? (r.inserted ?? 0) : 0), 0);
+    const totalSkipped = results.reduce((s, r) => s + ('skipped' in r ? (r.skipped ?? 0) : 0), 0);
 
     return Response.json({ ok: true, sources: results, totalInserted, totalSkipped });
   } catch (err) {
