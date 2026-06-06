@@ -20,10 +20,13 @@ function rowToSource(r: Record<string, unknown>) {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const db = await getDb();
-    const rows = await db.execute('SELECT * FROM scrape_sources ORDER BY created_at ASC');
+    const city = new URL(request.url).searchParams.get('city');
+    const rows = city
+      ? await db.execute({ sql: 'SELECT * FROM scrape_sources WHERE city = ? ORDER BY created_at ASC', args: [city] })
+      : await db.execute('SELECT * FROM scrape_sources ORDER BY created_at ASC');
     return Response.json(rows.rows.map(rowToSource));
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

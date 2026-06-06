@@ -3,16 +3,19 @@ import ShowsAdmin from './components/ShowsAdmin';
 import SyncPanel from './components/SyncPanel';
 import type { Venue } from '@/types';
 import Link from 'next/link';
+import { CITIES } from '@/lib/cities';
 
 export const dynamic = 'force-dynamic';
 
-async function getAdminShows() {
+async function getAdminShows(city: string) {
   const db = await getDb();
-  const showsResult = await db.execute(
-    `SELECT s.*, v.name as venue_name
-     FROM shows s JOIN venues v ON s.venue_id = v.id
-     ORDER BY s.date ASC, COALESCE(s.show_time, '23:59') ASC`
-  );
+  const showsResult = await db.execute({
+    sql: `SELECT s.*, v.name as venue_name
+          FROM shows s JOIN venues v ON s.venue_id = v.id
+          WHERE v.city = ?
+          ORDER BY s.date ASC, COALESCE(s.show_time, '23:59') ASC`,
+    args: [city],
+  });
   if (!showsResult.rows.length) return [];
 
   const showIds = showsResult.rows.map((r) => Number(r['id']));
@@ -43,9 +46,9 @@ async function getAdminShows() {
   }));
 }
 
-async function getVenues(): Promise<Venue[]> {
+async function getVenues(city: string): Promise<Venue[]> {
   const db = await getDb();
-  const result = await db.execute('SELECT * FROM venues ORDER BY name ASC');
+  const result = await db.execute({ sql: 'SELECT * FROM venues WHERE city = ? ORDER BY name ASC', args: [city] });
   return result.rows.map((r) => ({
     id: Number(r['id']),
     name: String(r['name']),
@@ -56,22 +59,73 @@ async function getVenues(): Promise<Venue[]> {
   }));
 }
 
-export default async function AdminPage() {
-  const [shows, venues] = await Promise.all([getAdminShows(), getVenues()]);
+async function getCitiesWithData(): Promise<string[]> {
+  const db = await getDb();
+  const r = await db.execute('SELECT DISTINCT city FROM venues ORDER BY city ASC');
+  return r.rows.map((v) => String(v['city']));
+}
+
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ city?: string }>;
+}) {
+  const params = await searchParams;
+  const allCities = await getCitiesWithData();
+  // Default to Austin, or first city with data
+  const activeCity = params.city && allCities.includes(params.city)
+    ? params.city
+    : (allCities.find((c) => c.toLowerCase() === 'austin') ?? allCities[0] ?? 'Austin');
+
+  const [shows, venues] = await Promise.all([getAdminShows(activeCity), getVenues(activeCity)]);
+
+  const registeredCities = Object.values(CITIES);
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, borderBottom: '1px solid #ddd', paddingBottom: 8 }}>
-        <h2 style={{ margin: 0, fontSize: 16 }}>Admin · Shows</h2>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, borderBottom: '1px solid #ddd', paddingBottom: 8 }}>
+        <h2 style={{ margin: 0, fontSize: 16 }}>Admin</h2>
         <div style={{ fontSize: 12 }}>
           <strong>Shows</strong>
           {' · '}
-          <Link href="/admin/venues">Venues</Link>
+          <Link href={`/admin/venues?city=${encodeURIComponent(activeCity)}`}>Venues</Link>
           {' · '}
-          <Link href="/">← Public site</Link>
+          <Link href={`/${activeCity.toLowerCase().replace(/\s+/g, '-')}`}>← Public site</Link>
         </div>
       </div>
-      <SyncPanel />
+
+      {/* City tabs */}
+      <div style={{ display: 'flex', gap: 0, marginBottom: 12, borderBottom: '1px solid #ddd', flexWrap: 'wrap' }}>
+        {allCities.map((city) => {
+          const isActive = city === activeCity;
+          const meta = registeredCities.find((c) => c.name === city);
+          const label = meta?.shortName ?? city;
+          return (
+            <Link
+              key={city}
+              href={`/admin?city=${encodeURIComponent(city)}`}
+              style={{
+                padding: '5px 14px',
+                fontSize: 12,
+                textDecoration: 'none',
+                borderBottom: isActive ? '2px solid #551A8B' : '2px solid transparent',
+                color: isActive ? '#551A8B' : '#888',
+                fontWeight: isActive ? 'bold' : 'normal',
+                marginBottom: '-1px',
+              }}
+            >
+              {label}
+            </Link>
+          );
+        })}
+        {/* Link to add a new city via public page */}
+        <span style={{ marginLeft: 'auto', fontSize: 11, color: '#bbb', padding: '5px 4px', alignSelf: 'center' }}>
+          {activeCity}
+        </span>
+      </div>
+
+      <SyncPanel city={activeCity} />
       <ShowsAdmin initialShows={shows} venues={venues} />
     </div>
   );

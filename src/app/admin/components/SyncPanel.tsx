@@ -50,7 +50,7 @@ function fmtAgo(iso: string | null): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-export default function SyncPanel() {
+export default function SyncPanel({ city }: { city: string }) {
   const [sources, setSources] = useState<Source[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncingId, setSyncingId] = useState<number | 'all' | null>(null);
@@ -60,21 +60,20 @@ export default function SyncPanel() {
   const [detecting, setDetecting] = useState(false);
   const [detectResult, setDetectResult] = useState<DetectResult | null>(null);
   const [saveName, setSaveName] = useState('');
-  const [saveCity, setSaveCity] = useState('Austin');
+  const [saveCity, setSaveCity] = useState(city);
   const [saving, setSaving] = useState(false);
 
   const loadSources = useCallback(async () => {
     try {
-      const res = await fetch('/api/scrape/sources');
+      const res = await fetch(`/api/scrape/sources?city=${encodeURIComponent(city)}`);
       if (!res.ok) { setLoading(false); return; }
       const data = await res.json();
-      // API returns {error} on failure, or an array on success
       if (Array.isArray(data)) setSources(data);
     } catch (e) {
       console.error('Failed to load sync sources:', e);
     }
     setLoading(false);
-  }, []);
+  }, [city]);
 
   useEffect(() => { loadSources(); }, [loadSources]);
 
@@ -83,6 +82,8 @@ export default function SyncPanel() {
     try {
       const p = new URLSearchParams();
       if (id !== 'all') p.set('source_id', String(id));
+      // For 'all', POST /api/scrape will run all enabled sources;
+      // city filtering happens because sources are already city-scoped
       if (skipSpotify) p.set('skip_spotify', '1');
       await fetch(`/api/scrape?${p}`, { method: 'POST' });
       await loadSources();
@@ -125,6 +126,7 @@ export default function SyncPanel() {
       await fetch('/api/scrape/sources', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: saveName, url: detectUrl, sourceType: detectResult.sourceType, city: saveCity }),
+        // Note: saveCity is pre-filled from detect result but editable
       });
       setShowAdd(false); setDetectUrl(''); setDetectResult(null); setSaveName('');
       await loadSources();
@@ -142,7 +144,7 @@ export default function SyncPanel() {
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
-        <strong style={{ fontSize: 13 }}>Sync Sources</strong>
+        <strong style={{ fontSize: 13 }}>Sync Sources · <span style={{ color: '#551A8B' }}>{city}</span></strong>
         <span style={{ fontSize: 11, color: '#888' }}>{enabledCount} of {sources.length} enabled</span>
         <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer' }}>
           <input type="checkbox" checked={skipSpotify} onChange={(e) => setSkipSpotify(e.target.checked)} />
