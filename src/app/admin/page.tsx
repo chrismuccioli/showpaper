@@ -1,5 +1,6 @@
 import { getDb } from '@/lib/db';
 import ShowsAdmin from './components/ShowsAdmin';
+import SyncPanel from './components/SyncPanel';
 import type { Venue } from '@/types';
 import Link from 'next/link';
 
@@ -70,6 +71,7 @@ export default async function AdminPage() {
           <Link href="/">← Public site</Link>
         </div>
       </div>
+      <SyncPanel />
       <ShowsAdmin initialShows={shows} venues={venues} />
     </div>
   );
