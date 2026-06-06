@@ -32,6 +32,7 @@ const TYPE_LABELS: Record<string, { label: string; color: string }> = {
   'antones':         { label: 'Custom',     color: '#1a6e7a' },
   'songkick-venue':  { label: 'Songkick',   color: '#e53333' },
   'thirteenthfloor': { label: 'Custom',     color: '#1a6e7a' },
+  'prekindle':       { label: 'Prekindle',  color: '#c47a00' },
   'unknown':         { label: '?',          color: '#888' },
 };
 

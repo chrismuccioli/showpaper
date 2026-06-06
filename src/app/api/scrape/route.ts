@@ -2,6 +2,7 @@ import { scrapeResound } from '@/lib/scrapers/resound';
 import { scrapeAntones } from '@/lib/scrapers/antones';
 import { scrapeSongkickVenue } from '@/lib/scrapers/songkick';
 import { scrapeThirteenthFloor } from '@/lib/scrapers/thirteenthfloor';
+import { scrapePrekindle } from '@/lib/scrapers/prekindle';
 import { ingestShows } from '@/lib/scrapers/ingest';
 import { getDb } from '@/lib/db';
 import type { IngestResult } from '@/lib/scrapers/types';
@@ -32,6 +33,10 @@ async function runSource(
   }
   if (sourceType === 'thirteenthfloor') {
     const shows = await scrapeThirteenthFloor(url);
+    return await ingestShows(shows, name, opts);
+  }
+  if (sourceType === 'prekindle') {
+    const shows = await scrapePrekindle(url);
     return await ingestShows(shows, name, opts);
   }
   throw new Error(`Unknown source type: ${sourceType}`);

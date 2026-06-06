@@ -2,6 +2,7 @@ import { scrapeResound } from './resound';
 import { scrapeAntones } from './antones';
 import { scrapeSongkickVenue, venueNameFromSlug } from './songkick';
 import { scrapeThirteenthFloor } from './thirteenthfloor';
+import { scrapePrekindle } from './prekindle';
 import type { ScrapedShow } from './types';
 
 export type SourceType =
@@ -9,6 +10,7 @@ export type SourceType =
   | 'antones'
   | 'songkick-venue'
   | 'thirteenthfloor'
+  | 'prekindle'
   | 'unknown';
 
 export interface DetectResult {
@@ -35,6 +37,7 @@ export function detectSourceType(url: string): SourceType {
   if (u.includes('antonesnightclub.com')) return 'antones';
   if (u.includes('songkick.com/venues')) return 'songkick-venue';
   if (u.includes('the13thflooraustin.com') || u.includes('13thflooraustin')) return 'thirteenthfloor';
+  if (u.includes('prekindle.com')) return 'prekindle';
   return 'unknown';
 }
 
@@ -108,6 +111,12 @@ async function testScrape(url: string, sourceType: SourceType): Promise<{
     if (sourceType === 'thirteenthfloor') {
       const shows = await scrapeThirteenthFloor(url);
       return { shows, venueName: 'The 13th Floor', venueAddress: null };
+    }
+    if (sourceType === 'prekindle') {
+      const shows = await scrapePrekindle(url);
+      const venueName = shows[0]?.venueName ?? null;
+      const venueAddress = shows[0]?.venueAddress ?? null;
+      return { shows, venueName, venueAddress };
     }
     return { shows: [], venueName: null, venueAddress: null, error: 'Unsupported source type' };
   } catch (err) {
