@@ -54,13 +54,11 @@ export default async function CityPage({
     getVenuesByCity(meta.name),
   ]);
 
-  // Build preview playlist — headliner per show, deduplicated by artist
+  // Build artist browser playlist — one entry per unique artist with a Spotify ID
   const seenArtists = new Set<number>();
   const playlist: PlaylistItem[] = shows
     .flatMap((show) =>
-      show.artists
-        .filter((a) => a.preview_url)
-        .map((a) => ({ show, artist: a }))
+      show.artists.map((a) => ({ show, artist: a }))
     )
     .filter(({ artist }) => {
       if (seenArtists.has(artist.id)) return false;
@@ -72,7 +70,7 @@ export default async function CityPage({
       artistName: artist.name,
       artistSlug: artist.slug,
       artistPhoto: artist.photo_url,
-      previewUrl: artist.preview_url!,
+      spotifyId: artist.spotify_id,
       showDate: show.date,
       venueName: show.venue_name,
       showId: show.id,

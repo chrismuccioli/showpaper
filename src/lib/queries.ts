@@ -4,17 +4,17 @@ import type { ShowGridItem } from '@/app/components/ShowGrid';
 
 const today = () => new Date().toISOString().split('T')[0];
 
-async function attachArtists(db: Awaited<ReturnType<typeof getDb>>, showRows: { id: number }[]): Promise<Record<number, { id: number; name: string; photo_url: string | null; slug: string | null; preview_url: string | null }[]>> {
+async function attachArtists(db: Awaited<ReturnType<typeof getDb>>, showRows: { id: number }[]): Promise<Record<number, { id: number; name: string; photo_url: string | null; slug: string | null; preview_url: string | null; spotify_id: string | null }[]>> {
   if (!showRows.length) return {};
   const showIds = showRows.map((r) => r.id);
   const placeholders = showIds.map(() => '?').join(',');
   const artistsResult = await db.execute({
-    sql: `SELECT sa.show_id, sa.sort_order, a.id, a.name, a.photo_url, a.slug, a.preview_url
+    sql: `SELECT sa.show_id, sa.sort_order, a.id, a.name, a.photo_url, a.slug, a.preview_url, a.spotify_id
           FROM show_artists sa JOIN artists a ON sa.artist_id = a.id
           WHERE sa.show_id IN (${placeholders}) ORDER BY sa.show_id, sa.sort_order ASC`,
     args: showIds,
   });
-  const map: Record<number, { id: number; name: string; photo_url: string | null; slug: string | null; preview_url: string | null }[]> = {};
+  const map: Record<number, { id: number; name: string; photo_url: string | null; slug: string | null; preview_url: string | null; spotify_id: string | null }[]> = {};
   for (const r of artistsResult.rows) {
     const sid = Number(r['show_id']);
     if (!map[sid]) map[sid] = [];
@@ -24,6 +24,7 @@ async function attachArtists(db: Awaited<ReturnType<typeof getDb>>, showRows: { 
       photo_url: r['photo_url'] ? String(r['photo_url']) : null,
       slug: r['slug'] ? String(r['slug']) : null,
       preview_url: r['preview_url'] ? String(r['preview_url']) : null,
+      spotify_id: r['spotify_id'] ? String(r['spotify_id']) : null,
     });
   }
   return map;
