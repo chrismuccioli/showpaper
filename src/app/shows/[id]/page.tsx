@@ -1,34 +1,16 @@
 import { getDb } from '@/lib/db';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
+import { fmt12, fmtDateLong, formatPrice } from '@/lib/cities';
 
 export const dynamic = 'force-dynamic';
-
-function fmt12(t: string | null): string {
-  if (!t) return '';
-  const [h, m] = t.split(':').map(Number);
-  const ampm = h >= 12 ? 'pm' : 'am';
-  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`;
-}
-
-function fmtDateLong(d: string): string {
-  const [y, mo, day] = d.split('-').map(Number);
-  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const weekdays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  const date = new Date(y, mo - 1, day);
-  return `${weekdays[date.getDay()]}, ${months[mo - 1]} ${day}, ${y}`;
-}
-
-function formatPrice(min: number | null, max: number | null): string {
-  if (min === null || min === 0) return 'Free';
-  if (max && max !== min) return `$${min}–$${max}`;
-  return `$${min}`;
-}
 
 async function getShow(id: string) {
   const db = await getDb();
   const showResult = await db.execute({
-    sql: `SELECT s.*, v.name as venue_name, v.address as venue_address, v.website as venue_website
+    sql: `SELECT s.*, v.id as venue_id, v.name as venue_name, v.address as venue_address,
+                 v.website as venue_website, v.city as venue_city
           FROM shows s JOIN venues v ON s.venue_id = v.id WHERE s.id = ?`,
     args: [id],
   });
@@ -50,9 +32,11 @@ async function getShow(id: string) {
     price_min: r['price_min'] != null ? Number(r['price_min']) : null,
     price_max: r['price_max'] != null ? Number(r['price_max']) : null,
     ticket_url: r['ticket_url'] ? String(r['ticket_url']) : null,
+    venue_id: Number(r['venue_id']),
     venue_name: String(r['venue_name']),
     venue_address: r['venue_address'] ? String(r['venue_address']) : null,
     venue_website: r['venue_website'] ? String(r['venue_website']) : null,
+    venue_city: String(r['venue_city']),
     artists: artistsResult.rows.map((a) => ({
       id: Number(a['id']),
       name: String(a['name']),
@@ -64,6 +48,35 @@ async function getShow(id: string) {
   };
 }
 
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const show = await getShow(id);
+  if (!show) return {};
+
+  const artistNames = show.artists.map((a) => a.name).join(', ') || 'Live Show';
+  const priceLabel = formatPrice(show.price_min, show.price_max);
+  const dateStr = fmtDateLong(show.date);
+  const timeStr = show.show_time ? ` at ${fmt12(show.show_time)}` : '';
+  const title = `${artistNames} at ${show.venue_name} — ${dateStr} | Showpaper`;
+  const description = `${artistNames} live at ${show.venue_name} in ${show.venue_city} on ${dateStr}${timeStr}. ${priceLabel !== 'free' ? `Tickets from ${priceLabel}.` : 'Free admission.'} Get tickets and music previews on Showpaper.`;
+  const ogImage = show.artists[0]?.photo_url;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title, description, siteName: 'Showpaper', type: 'website',
+      ...(ogImage && { images: [{ url: ogImage, alt: artistNames }] }),
+    },
+    twitter: {
+      card: ogImage ? 'summary_large_image' : 'summary',
+      title, description,
+      ...(ogImage && { images: [ogImage] }),
+    },
+    alternates: { canonical: `/shows/${id}` },
+  };
+}
+
 export default async function ShowDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const show = await getShow(id);
@@ -71,50 +84,87 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
 
   const mapsQuery = encodeURIComponent(show.venue_address ? `${show.venue_name}, ${show.venue_address}` : show.venue_name);
   const priceLabel = formatPrice(show.price_min, show.price_max);
+  const citySlug = show.venue_city.toLowerCase().replace(/\s+/g, '-');
+
+  // JSON-LD Event schema for Google rich results
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Event',
+    name: show.artists.map((a) => a.name).join(', ') || 'Live Show',
+    startDate: show.show_time ? `${show.date}T${show.show_time}` : show.date,
+    ...(show.doors_time && { doorTime: `${show.date}T${show.doors_time}` }),
+    eventStatus: 'https://schema.org/EventScheduled',
+    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+    location: {
+      '@type': 'Place', name: show.venue_name,
+      url: `https://showpaper.co/venues/${show.venue_id}`,
+      address: { '@type': 'PostalAddress', streetAddress: show.venue_address ?? undefined, addressLocality: show.venue_city, addressCountry: 'US' },
+    },
+    performer: show.artists.map((a) => ({
+      '@type': 'MusicGroup', name: a.name,
+      url: `https://showpaper.co/artists/${a.id}`,
+      ...(a.photo_url && { image: a.photo_url }),
+    })),
+    ...(show.ticket_url && {
+      offers: {
+        '@type': 'Offer', url: show.ticket_url, priceCurrency: 'USD',
+        ...(show.price_min != null && show.price_min > 0 && { price: show.price_min }),
+        availability: 'https://schema.org/InStock',
+      },
+    }),
+    url: `https://showpaper.co/shows/${id}`,
+    ...(show.artists[0]?.photo_url && { image: show.artists[0].photo_url }),
+  };
 
   return (
+    <>
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
     <div style={{ maxWidth: 680 }}>
-      {/* CL-style breadcrumb */}
-      <div style={{ fontSize: 13, color: '#666', marginBottom: 10, borderBottom: '1px solid #ccc', paddingBottom: 6 }}>
+      {/* Breadcrumb */}
+      <div style={{ fontSize: 12, color: '#888', marginBottom: 10, borderBottom: '1px solid #ccc', paddingBottom: 6 }}>
         <Link href="/">showpaper</Link>
         {' › '}
-        <Link href="/">austin</Link>
+        <Link href={`/${citySlug}`}>{show.venue_city.toLowerCase()}</Link>
         {' › events › '}
         <span>{show.artists[0]?.name ?? 'show'}</span>
       </div>
 
-      {/* CL-style heading: title — price (venue) */}
+      {/* Heading with artist links */}
       <h1 style={{ fontSize: 18, fontWeight: 'bold', margin: '0 0 10px', color: '#222', lineHeight: 1.3 }}>
-        {show.artists.map(a => a.name).join(', ') || 'TBA'}
+        {show.artists.length > 0
+          ? show.artists.map((a, i) => (
+              <span key={a.id}>
+                <Link href={`/artists/${a.id}`} style={{ color: '#222' }}>{a.name}</Link>
+                {i < show.artists.length - 1 ? ', ' : ''}
+              </span>
+            ))
+          : 'TBA'}
         {' '}
         <span style={{ fontWeight: 'normal', color: '#666' }}>
           &mdash; {priceLabel}
-          {show.venue_address && <span> ({show.venue_name})</span>}
+          {show.venue_address && <span> (<Link href={`/venues/${show.venue_id}`} style={{ color: '#666' }}>{show.venue_name}</Link>)</span>}
         </span>
       </h1>
 
-      {/* Two-column layout: images left, metadata right */}
+      {/* Two-column: photos (linked) left, metadata right */}
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 16 }}>
-        {/* Artist photos */}
-        {show.artists.some(a => a.photo_url) && (
+        {/* Artist photos — each links to artist page */}
+        {show.artists.some((a) => a.photo_url) && (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flexShrink: 0 }}>
             {show.artists.map((artist) => (
               <div key={artist.id}>
-                {artist.photo_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={artist.photo_url}
-                    alt={artist.name}
-                    width={120}
-                    height={120}
-                    style={{ objectFit: 'cover', display: 'block', border: '1px solid #ddd' }}
-                  />
-                ) : (
-                  <div style={{ width: 120, height: 120, background: '#ede8f5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, color: '#9e7ec9', border: '1px solid #ddd' }}>♪</div>
-                )}
-                {show.artists.length > 1 && (
-                  <div style={{ fontSize: 10, color: '#666', marginTop: 2, maxWidth: 120, textAlign: 'center' }}>{artist.name}</div>
-                )}
+                <Link href={`/artists/${artist.id}`} style={{ display: 'block' }}>
+                  {artist.photo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={artist.photo_url} alt={artist.name} width={110} height={110}
+                      style={{ objectFit: 'cover', display: 'block', border: '1px solid #ddd', borderRadius: 3 }} />
+                  ) : (
+                    <div style={{ width: 110, height: 110, background: '#eee', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, color: '#ccc', border: '1px solid #ddd' }}>♪</div>
+                  )}
+                </Link>
+                <div style={{ fontSize: 11, color: '#666', marginTop: 3, maxWidth: 110, textAlign: 'center' }}>
+                  <Link href={`/artists/${artist.id}`} style={{ color: '#666' }}>{artist.name}</Link>
+                </div>
                 {artist.bandcamp_url && (
                   <div style={{ textAlign: 'center' }}>
                     <a href={artist.bandcamp_url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: '#1da0c3' }}>bandcamp</a>
@@ -128,6 +178,16 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
         {/* Metadata — CL-style attribute table */}
         <table style={{ fontSize: 12, borderCollapse: 'collapse', flex: 1 }}>
           <tbody>
+            {show.artists.length > 0 && (
+              <tr>
+                <td style={{ padding: '3px 12px 3px 0', color: '#888', whiteSpace: 'nowrap', verticalAlign: 'top' }}>artists</td>
+                <td style={{ padding: '3px 0' }}>
+                  {show.artists.map((a, i) => (
+                    <span key={a.id}><Link href={`/artists/${a.id}`}>{a.name}</Link>{i < show.artists.length - 1 ? ', ' : ''}</span>
+                  ))}
+                </td>
+              </tr>
+            )}
             <tr>
               <td style={{ padding: '3px 12px 3px 0', color: '#888', whiteSpace: 'nowrap', verticalAlign: 'top' }}>date</td>
               <td style={{ padding: '3px 0' }}><strong>{fmtDateLong(show.date)}</strong></td>
@@ -147,11 +207,12 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
             <tr>
               <td style={{ padding: '3px 12px 3px 0', color: '#888', whiteSpace: 'nowrap' }}>venue</td>
               <td style={{ padding: '3px 0' }}>
-                {show.venue_website
-                  ? <a href={show.venue_website} target="_blank" rel="noreferrer">{show.venue_name}</a>
-                  : show.venue_name
-                }
+                <Link href={`/venues/${show.venue_id}`}>{show.venue_name}</Link>
               </td>
+            </tr>
+            <tr>
+              <td style={{ padding: '3px 12px 3px 0', color: '#888', whiteSpace: 'nowrap' }}>city</td>
+              <td style={{ padding: '3px 0' }}><Link href={`/${citySlug}`}>{show.venue_city}</Link></td>
             </tr>
             {show.venue_address && (
               <tr>
@@ -188,10 +249,10 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
       {/* Spotify previews */}
       {show.artists.some((a) => a.preview_url) && (
         <div style={{ borderTop: '1px solid #e8e8e8', paddingTop: 10, marginTop: 4 }}>
-          <div style={{ fontSize: 11, color: '#888', marginBottom: 6 }}>30s previews</div>
+          <div style={{ fontSize: 11, color: '#888', marginBottom: 6 }}>30s previews via Spotify</div>
           {show.artists.filter((a) => a.preview_url).map((artist) => (
             <div key={artist.id} style={{ marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 11, color: '#555', minWidth: 120 }}>{artist.name}</span>
+              <Link href={`/artists/${artist.id}`} style={{ fontSize: 12, color: '#00E', minWidth: 140 }}>{artist.name}</Link>
               {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
               <audio controls src={artist.preview_url!} style={{ height: 24, width: 240 }} />
             </div>
@@ -199,14 +260,16 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
         </div>
       )}
 
-      {/* CL-style footer */}
-      <div style={{ marginTop: 24, fontSize: 10, color: '#aaa', borderTop: '1px solid #eee', paddingTop: 8 }}>
-        <Link href="/">all shows</Link>
+      {/* Footer nav — full interlinking */}
+      <div style={{ marginTop: 24, fontSize: 11, color: '#aaa', borderTop: '1px solid #eee', paddingTop: 8 }}>
+        <Link href={`/${citySlug}`}>← {show.venue_city.toLowerCase()} shows</Link>
         {' · '}
-        <a href="/admin">post a show</a>
-        {' · '}
-        <span>austin, tx</span>
+        <Link href={`/venues/${show.venue_id}`}>{show.venue_name}</Link>
+        {show.artists.map((a) => (
+          <span key={a.id}> · <Link href={`/artists/${a.id}`}>{a.name}</Link></span>
+        ))}
       </div>
     </div>
+    </>
   );
 }
