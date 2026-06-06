@@ -3,7 +3,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getDb } from '@/lib/db';
 import { getShowsByArtist } from '@/lib/queries';
-import { fmtDateShort, fmt12, formatPrice } from '@/lib/cities';
+import { fmtDateShort, fmt12, formatPrice, venueUrl } from '@/lib/cities';
+import ShowPlayerButton from '@/app/components/ShowPlayerButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -136,12 +137,36 @@ export default async function ArtistPage({ params }: { params: Promise<{ id: str
                 const otherArtists = show.artists.filter((a) => a.id !== Number(id));
                 return (
                   <tr key={show.id}>
-                    <td style={{ padding: '8px 10px 8px 0', whiteSpace: 'nowrap', color: '#444', width: 110 }}>
+                    {/* Thumbnail with play button */}
+                    <td style={{ padding: '8px 10px 8px 0', width: 36 }}>
+                      <div style={{ position: 'relative', width: 32, height: 32 }} className="show-thumb">
+                        <Link href={`/shows/${show.id}`} style={{ display: 'block' }}>
+                          {show.artists[0]?.photo_url
+                            // eslint-disable-next-line @next/next/no-img-element
+                            ? <img src={show.artists[0].photo_url} alt="" width={32} height={32} style={{ objectFit: 'cover', borderRadius: 3, display: 'block' }} />
+                            : <div style={{ width: 32, height: 32, background: '#eee', borderRadius: 3 }} />}
+                        </Link>
+                        {show.artists[0]?.spotify_id && (
+                          <ShowPlayerButton
+                            artistId={show.artists[0].id}
+                            artistName={show.artists[0].name}
+                            artistSlug={show.artists[0].slug}
+                            artistPhoto={show.artists[0].photo_url}
+                            spotifyId={show.artists[0].spotify_id}
+                            showId={show.id}
+                            showSlug={show.slug}
+                            venueName={show.venue_name}
+                            showDate={show.date}
+                          />
+                        )}
+                      </div>
+                    </td>
+                    <td style={{ padding: '8px 10px 8px 0', whiteSpace: 'nowrap', color: '#444', width: 100 }}>
                       <strong>{fmtDateShort(show.date)}</strong>
                       {show.show_time && <span style={{ color: '#888', display: 'block', fontSize: 12 }}>{fmt12(show.show_time)}</span>}
                     </td>
                     <td style={{ padding: '8px 10px' }}>
-                      <Link href={`/venues/${show.venue_id}`} style={{ color: '#00E', fontWeight: 'bold' }}>
+                      <Link href={venueUrl(show.venue_slug, show.venue_id, show.venue_name)} style={{ color: '#00E', fontWeight: 'bold' }}>
                         {show.venue_name}
                       </Link>
                       {otherArtists.length > 0 && (

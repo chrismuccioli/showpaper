@@ -3,7 +3,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getDb } from '@/lib/db';
 import { getShowsByVenue } from '@/lib/queries';
-import { fmtDateShort, fmt12, formatPrice } from '@/lib/cities';
+import { fmtDateShort, fmt12, formatPrice, artistUrl } from '@/lib/cities';
+import ShowPlayerButton from '@/app/components/ShowPlayerButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -134,17 +135,32 @@ export default async function VenuePage({ params }: { params: Promise<{ id: stri
                 const isFree = show.price_min === 0 || show.price_min === null;
                 return (
                   <tr key={show.id}>
-                    {/* Thumbnail */}
+                    {/* Thumbnail with play button */}
                     <td style={{ padding: '8px 10px 8px 0', width: 44 }}>
-                      <Link href={`/shows/${show.id}`}>
-                        {headliner?.photo_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={headliner.photo_url} alt="" width={40} height={40}
-                            style={{ objectFit: 'cover', borderRadius: 4, display: 'block' }} />
-                        ) : (
-                          <div style={{ width: 40, height: 40, background: '#eee', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 18 }}>♪</div>
+                      <div style={{ position: 'relative', width: 40, height: 40 }} className="show-thumb">
+                        <Link href={`/shows/${show.id}`} style={{ display: 'block' }}>
+                          {headliner?.photo_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={headliner.photo_url} alt="" width={40} height={40}
+                              style={{ objectFit: 'cover', borderRadius: 4, display: 'block' }} />
+                          ) : (
+                            <div style={{ width: 40, height: 40, background: '#eee', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 18 }}>♪</div>
+                          )}
+                        </Link>
+                        {headliner?.spotify_id && (
+                          <ShowPlayerButton
+                            artistId={headliner.id}
+                            artistName={headliner.name}
+                            artistSlug={headliner.slug}
+                            artistPhoto={headliner.photo_url}
+                            spotifyId={headliner.spotify_id}
+                            showId={show.id}
+                            showSlug={show.slug}
+                            venueName={show.venue_name}
+                            showDate={show.date}
+                          />
                         )}
-                      </Link>
+                      </div>
                     </td>
                     {/* Date */}
                     <td style={{ padding: '8px 12px 8px 0', whiteSpace: 'nowrap', color: '#444', width: 100 }}>
@@ -154,7 +170,7 @@ export default async function VenuePage({ params }: { params: Promise<{ id: stri
                     {/* Artists */}
                     <td style={{ padding: '8px 12px' }}>
                       {headliner ? (
-                        <Link href={`/artists/${headliner.id}`} style={{ color: '#00E', fontWeight: 'bold' }}>
+                        <Link href={artistUrl(headliner.slug, headliner.id, headliner.name)} style={{ color: '#00E', fontWeight: 'bold' }}>
                           {headliner.name}
                         </Link>
                       ) : (
@@ -165,7 +181,7 @@ export default async function VenuePage({ params }: { params: Promise<{ id: stri
                           {', '}
                           {supporting.map((a, i) => (
                             <span key={a.id}>
-                              <Link href={`/artists/${a.id}`} style={{ color: '#666' }}>{a.name}</Link>
+                              <Link href={artistUrl(a.slug, a.id, a.name)} style={{ color: '#666' }}>{a.name}</Link>
                               {i < supporting.length - 1 ? ', ' : ''}
                             </span>
                           ))}
