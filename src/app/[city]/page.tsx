@@ -8,6 +8,7 @@ import {
 } from '@/lib/cities';
 import { getShowsByCity, getVenuesByCity } from '@/lib/queries';
 import ShowGrid from '@/app/components/ShowGrid';
+import MiniPlayer, { type PlaylistItem } from '@/app/components/MiniPlayer';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,6 +53,31 @@ export default async function CityPage({
     getShowsByCity(meta.name, venue, dateRange?.from, dateRange?.to),
     getVenuesByCity(meta.name),
   ]);
+
+  // Build preview playlist — headliner per show, deduplicated by artist
+  const seenArtists = new Set<number>();
+  const playlist: PlaylistItem[] = shows
+    .flatMap((show) =>
+      show.artists
+        .filter((a) => a.preview_url)
+        .map((a) => ({ show, artist: a }))
+    )
+    .filter(({ artist }) => {
+      if (seenArtists.has(artist.id)) return false;
+      seenArtists.add(artist.id);
+      return true;
+    })
+    .map(({ show, artist }) => ({
+      artistId: artist.id,
+      artistName: artist.name,
+      artistSlug: artist.slug,
+      artistPhoto: artist.photo_url,
+      previewUrl: artist.preview_url!,
+      showDate: show.date,
+      venueName: show.venue_name,
+      showId: show.id,
+      showSlug: show.slug,
+    }));
 
   const otherCities = Object.values(CITIES).filter((c) => c.slug !== city);
   const isFiltered = !!period || !!month;
@@ -175,6 +201,9 @@ export default async function CityPage({
         groupByDate={true}
         filterBar={filterBar}
       />
+
+      {/* Floating preview jukebox — no auth required */}
+      <MiniPlayer playlist={playlist} />
     </>
   );
 }

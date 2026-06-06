@@ -13,7 +13,7 @@ export interface ShowGridItem {
   venue_id: number;
   venue_name: string;
   venue_slug: string | null;
-  artists: { id: number; name: string; photo_url: string | null; slug: string | null }[];
+  artists: { id: number; name: string; photo_url: string | null; slug: string | null; preview_url: string | null }[];
 }
 
 // ── Reusable show row (used in flat list and grouped view) ────────────────────
