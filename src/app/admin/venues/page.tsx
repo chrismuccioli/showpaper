@@ -38,7 +38,7 @@ export default async function AdminVenuesPage({
           <Link href={`/${city.toLowerCase().replace(/\s+/g, '-')}`}>← Public site</Link>
         </div>
       </div>
-      <VenuesAdmin initialVenues={venues} />
+      <VenuesAdmin initialVenues={venues} defaultCity={city} />
     </div>
   );
 }

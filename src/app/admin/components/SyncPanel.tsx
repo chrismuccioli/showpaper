@@ -82,8 +82,7 @@ export default function SyncPanel({ city }: { city: string }) {
     try {
       const p = new URLSearchParams();
       if (id !== 'all') p.set('source_id', String(id));
-      // For 'all', POST /api/scrape will run all enabled sources;
-      // city filtering happens because sources are already city-scoped
+      else p.set('city', city); // scope Sync All to this city's enabled sources
       if (skipSpotify) p.set('skip_spotify', '1');
       await fetch(`/api/scrape?${p}`, { method: 'POST' });
       await loadSources();

@@ -1,9 +1,12 @@
 import { getDb } from '@/lib/db';
 import type { Venue } from '@/types';
 
-export async function GET() {
+export async function GET(request: Request) {
   const db = await getDb();
-  const result = await db.execute('SELECT * FROM venues ORDER BY name ASC');
+  const city = new URL(request.url).searchParams.get('city');
+  const result = city
+    ? await db.execute({ sql: 'SELECT * FROM venues WHERE city = ? ORDER BY name ASC', args: [city] })
+    : await db.execute('SELECT * FROM venues ORDER BY name ASC');
   const venues: Venue[] = result.rows.map((r) => ({
     id: Number(r['id']),
     name: String(r['name']),

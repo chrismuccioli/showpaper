@@ -72,14 +72,20 @@ export default async function AdminPage({
 }) {
   const params = await searchParams;
   const allCities = await getCitiesWithData();
-  // Default to Austin, or first city with data
-  const activeCity = params.city && allCities.includes(params.city)
-    ? params.city
+  const registeredCityNames = Object.values(CITIES).map((c) => c.name);
+  // Allow navigating to any registered city (even if empty) OR any city with data
+  const requestedCity = params.city;
+  const activeCity = requestedCity && (allCities.includes(requestedCity) || registeredCityNames.includes(requestedCity))
+    ? requestedCity
     : (allCities.find((c) => c.toLowerCase() === 'austin') ?? allCities[0] ?? 'Austin');
 
   const [shows, venues] = await Promise.all([getAdminShows(activeCity), getVenues(activeCity)]);
 
-  const registeredCities = Object.values(CITIES);
+  const registeredCities = Object.values(CITIES); // already computed above
+  // Cities that have data in DB + registered cities not yet in DB (for new-city navigation)
+  const unlaunchedCities = registeredCities.filter((c) => !allCities.includes(c.name));
+  const isNewCity = !allCities.includes(activeCity);
+  const activeMeta = registeredCities.find((c) => c.name === activeCity);
 
   return (
     <div>
@@ -96,37 +102,64 @@ export default async function AdminPage({
       </div>
 
       {/* City tabs */}
-      <div style={{ display: 'flex', gap: 0, marginBottom: 12, borderBottom: '1px solid #ddd', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 0, marginBottom: 12, borderBottom: '1px solid #ddd', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        {/* Active cities (have data) */}
         {allCities.map((city) => {
           const isActive = city === activeCity;
           const meta = registeredCities.find((c) => c.name === city);
           const label = meta?.shortName ?? city;
           return (
-            <Link
-              key={city}
-              href={`/admin?city=${encodeURIComponent(city)}`}
-              style={{
-                padding: '5px 14px',
-                fontSize: 12,
-                textDecoration: 'none',
+            <Link key={city} href={`/admin?city=${encodeURIComponent(city)}`}
+              style={{ padding: '5px 14px', fontSize: 12, textDecoration: 'none', marginBottom: '-1px',
                 borderBottom: isActive ? '2px solid #551A8B' : '2px solid transparent',
-                color: isActive ? '#551A8B' : '#888',
-                fontWeight: isActive ? 'bold' : 'normal',
-                marginBottom: '-1px',
-              }}
-            >
+                color: isActive ? '#551A8B' : '#888', fontWeight: isActive ? 'bold' : 'normal' }}>
               {label}
             </Link>
           );
         })}
-        {/* Link to add a new city via public page */}
-        <span style={{ marginLeft: 'auto', fontSize: 11, color: '#bbb', padding: '5px 4px', alignSelf: 'center' }}>
-          {activeCity}
-        </span>
+        {/* Unlaunched registered cities — dimmed, click to start setup */}
+        {unlaunchedCities.map((c) => {
+          const isActive = c.name === activeCity;
+          return (
+            <Link key={c.slug} href={`/admin?city=${encodeURIComponent(c.name)}`}
+              title={`Set up ${c.name}`}
+              style={{ padding: '5px 14px', fontSize: 12, textDecoration: 'none', marginBottom: '-1px',
+                borderBottom: isActive ? '2px solid #551A8B' : '2px dashed #ddd',
+                color: isActive ? '#551A8B' : '#ccc' }}>
+              + {c.shortName}
+            </Link>
+          );
+        })}
+        <span style={{ marginLeft: 'auto', fontSize: 11, color: '#bbb', padding: '5px 4px' }}>{activeCity}</span>
       </div>
 
-      <SyncPanel city={activeCity} />
-      <ShowsAdmin initialShows={shows} venues={venues} />
+      {/* New city empty state */}
+      {isNewCity ? (
+        <div style={{ border: '1px dashed #ddd', padding: 24, textAlign: 'center', color: '#888', background: '#fafafa', borderRadius: 4 }}>
+          <div style={{ fontSize: 16, marginBottom: 8 }}>
+            {activeMeta ? `🌆 ${activeMeta.name}, ${activeMeta.state}` : `🌆 ${activeCity}`}
+          </div>
+          <div style={{ fontSize: 13, marginBottom: 16, color: '#aaa' }}>
+            No venues or shows yet for this city.
+          </div>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link href={`/admin/venues?city=${encodeURIComponent(activeCity)}`}
+              style={{ padding: '6px 16px', background: '#551A8B', color: '#fff', borderRadius: 3, fontSize: 12, textDecoration: 'none' }}>
+              Add first venue
+            </Link>
+            <span style={{ fontSize: 12, color: '#aaa', alignSelf: 'center' }}>then</span>
+            <Link href={`/admin?city=${encodeURIComponent(activeCity)}`}
+              style={{ padding: '6px 16px', background: '#eee', border: '1px solid #ccc', borderRadius: 3, fontSize: 12, textDecoration: 'none', color: '#555' }}>
+              Add sync source
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <>
+          <SyncPanel city={activeCity} />
+          <ShowsAdmin initialShows={shows} venues={venues} />
+        </>
+      )}
     </div>
   );
 }

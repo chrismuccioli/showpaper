@@ -52,9 +52,12 @@ export async function POST(request: Request) {
 
   try {
     // Determine which sources to run
+    const cityFilter = reqUrl.searchParams.get('city');
     let rows;
     if (sourceId) {
       rows = (await db.execute({ sql: 'SELECT * FROM scrape_sources WHERE id = ?', args: [sourceId] })).rows;
+    } else if (cityFilter) {
+      rows = (await db.execute({ sql: 'SELECT * FROM scrape_sources WHERE enabled = 1 AND city = ? ORDER BY created_at ASC', args: [cityFilter] })).rows;
     } else {
       rows = (await db.execute('SELECT * FROM scrape_sources WHERE enabled = 1 ORDER BY created_at ASC')).rows;
     }

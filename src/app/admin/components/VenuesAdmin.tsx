@@ -3,16 +3,15 @@
 import { useState } from 'react';
 import type { Venue } from '@/types';
 
-const emptyForm = { name: '', address: '', city: 'Austin', website: '' };
-
-export default function VenuesAdmin({ initialVenues }: { initialVenues: Venue[] }) {
+export default function VenuesAdmin({ initialVenues, defaultCity = 'Austin' }: { initialVenues: Venue[]; defaultCity?: string }) {
+  const emptyForm = { name: '', address: '', city: defaultCity, website: '' };
   const [venues, setVenues] = useState<Venue[]>(initialVenues);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const resetForm = () => { setForm(emptyForm); setEditingId(null); setError(''); };
+  const resetForm = () => { setForm({ ...emptyForm }); setEditingId(null); setError(''); };
 
   const handleEdit = (v: Venue) => {
     setForm({ name: v.name, address: v.address ?? '', city: v.city, website: v.website ?? '' });
@@ -37,7 +36,7 @@ export default function VenuesAdmin({ initialVenues }: { initialVenues: Venue[] 
         { method: editingId ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) }
       );
       if (!res.ok) throw new Error((await res.json()).error ?? 'Save failed');
-      const listRes = await fetch('/api/venues');
+      const listRes = await fetch(`/api/venues?city=${encodeURIComponent(defaultCity)}`);
       setVenues(await listRes.json());
       resetForm();
     } catch (err) {
