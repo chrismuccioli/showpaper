@@ -98,8 +98,8 @@ export default function VenuesAdmin({ initialVenues }: { initialVenues: Venue[] 
           )}
           {venues.map((v) => (
             <tr key={v.id} style={{ borderBottom: '1px solid #eee' }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = '#fffbf5')}
-              onMouseLeave={(e) => (e.currentTarget.style.background = '')}
+              onMouseEnter={(e: React.MouseEvent<HTMLTableRowElement>) => (e.currentTarget.style.background = '#fffbf5')}
+              onMouseLeave={(e: React.MouseEvent<HTMLTableRowElement>) => (e.currentTarget.style.background = '')}
             >
               <td style={{ padding: '5px 6px', fontWeight: 'bold' }}>{v.name}</td>
               <td style={{ padding: '5px 6px', color: '#666' }}>{v.address ?? '—'}</td>

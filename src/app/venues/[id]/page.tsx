@@ -121,7 +121,7 @@ export default async function VenuePage({ params }: { params: Promise<{ id: stri
         {shows.length === 0 ? (
           <p style={{ color: '#888', fontSize: 13 }}>No upcoming shows at {venue.name} on Showpaper yet.</p>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }} className="show-table">
             <tbody>
               {shows.map((show) => {
                 const headliner = show.artists[0];
@@ -129,10 +129,7 @@ export default async function VenuePage({ params }: { params: Promise<{ id: stri
                 const price = formatPrice(show.price_min, show.price_max);
                 const isFree = show.price_min === 0 || show.price_min === null;
                 return (
-                  <tr key={show.id} style={{ borderBottom: '1px solid #eee' }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = '#f7f7f7')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = '')}
-                  >
+                  <tr key={show.id}>
                     {/* Thumbnail */}
                     <td style={{ padding: '8px 10px 8px 0', width: 44 }}>
                       <Link href={`/shows/${show.id}`}>

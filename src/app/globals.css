@@ -36,3 +36,7 @@ input, select, textarea, button {
   border-bottom: 1px solid #eee;
 }
 .result-row:hover { background: #bacff2; }
+
+/* Hover for show-list tables on artist/venue pages */
+.show-table tr:hover { background: #f7f7f7; }
+.show-table tr { border-bottom: 1px solid #eee; }

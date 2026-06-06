@@ -123,17 +123,14 @@ export default async function ArtistPage({ params }: { params: Promise<{ id: str
         {shows.length === 0 ? (
           <p style={{ color: '#888', fontSize: 13 }}>No upcoming shows on Showpaper yet.</p>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }} className="show-table">
             <tbody>
               {shows.map((show) => {
                 const price = formatPrice(show.price_min, show.price_max);
                 const isFree = show.price_min === 0 || show.price_min === null;
                 const otherArtists = show.artists.filter((a) => a.id !== Number(id));
                 return (
-                  <tr key={show.id} style={{ borderBottom: '1px solid #eee' }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = '#f7f7f7')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = '')}
-                  >
+                  <tr key={show.id}>
                     <td style={{ padding: '8px 10px 8px 0', whiteSpace: 'nowrap', color: '#444', width: 110 }}>
                       <strong>{fmtDateShort(show.date)}</strong>
                       {show.show_time && <span style={{ color: '#888', display: 'block', fontSize: 12 }}>{fmt12(show.show_time)}</span>}

@@ -305,8 +305,8 @@ export default function ShowsAdmin({ initialShows, venues }: { initialShows: Sho
           )}
           {shows.map((s) => (
             <tr key={s.id} style={{ borderBottom: '1px solid #eee' }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = '#fffbf5')}
-              onMouseLeave={(e) => (e.currentTarget.style.background = '')}
+              onMouseEnter={(e: React.MouseEvent<HTMLTableRowElement>) => (e.currentTarget.style.background = '#fffbf5')}
+              onMouseLeave={(e: React.MouseEvent<HTMLTableRowElement>) => (e.currentTarget.style.background = '')}
             >
               <td style={{ padding: '5px 6px', whiteSpace: 'nowrap' }}>
                 {fmtDate(s.date)}
