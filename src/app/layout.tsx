@@ -27,6 +27,9 @@ export default function RootLayout({
           </a>
           <span style={{ color: '#ccc', fontSize: 16 }}>|</span>
           <span style={{ fontSize: 13, color: '#666' }}>austin</span>
+          <span style={{ color: '#ccc', fontSize: 16 }}>|</span>
+          <a href="/artists" style={{ fontSize: 13, color: '#551A8B', padding: '8px 4px' }}>artists</a>
+          <a href="/venues" style={{ fontSize: 13, color: '#551A8B', padding: '8px 4px' }}>venues</a>
           <a href="/admin" style={{ marginLeft: 'auto', fontSize: 13, color: '#551A8B', padding: '8px 4px' }}>admin</a>
         </div>
         <div style={{ maxWidth: 860, margin: '0 auto', padding: '8px 10px' }}>
