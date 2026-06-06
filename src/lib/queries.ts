@@ -29,15 +29,22 @@ async function attachArtists(db: Awaited<ReturnType<typeof getDb>>, showRows: { 
 }
 
 /** Shows for a given city (matched against venues.city) */
-export async function getShowsByCity(cityName: string, venueId?: string): Promise<ShowGridItem[]> {
+export async function getShowsByCity(
+  cityName: string,
+  venueId?: string,
+  from?: string,
+  to?: string
+): Promise<ShowGridItem[]> {
   const db = await getDb();
+  const fromDate = from ?? today();
   let sql = `
     SELECT s.id, s.slug, s.date, s.show_time, s.doors_time, s.price_min, s.price_max, s.ticket_url,
            v.id as venue_id, v.name as venue_name, v.slug as venue_slug
     FROM shows s JOIN venues v ON s.venue_id = v.id
     WHERE v.city = ? AND s.date >= ?
   `;
-  const args: (string | number)[] = [cityName, today()];
+  const args: (string | number)[] = [cityName, fromDate];
+  if (to) { sql += ' AND s.date <= ?'; args.push(to); }
   if (venueId) { sql += ' AND s.venue_id = ?'; args.push(Number(venueId)); }
   sql += ` ORDER BY s.date ASC, COALESCE(s.show_time, '23:59') ASC`;
 

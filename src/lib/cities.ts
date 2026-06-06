@@ -109,6 +109,79 @@ export function formatPrice(min: number | null, max: number | null): string {
   return `$${min}`;
 }
 
+// ── Date range helpers ───────────────────────────────────────────────────────
+
+function fmtDate(d: Date): string {
+  return d.toISOString().split('T')[0];
+}
+
+export type Period = 'today' | 'weekend' | 'week' | 'next-week' | 'month' | 'all';
+
+export function computeDateRange(period: Period | null, month: string | null): { from: string; to: string } | null {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  if (month) {
+    // month = "YYYY-MM"
+    const [y, m] = month.split('-').map(Number);
+    const first = new Date(y, m - 1, 1);
+    const last = new Date(y, m, 0); // last day of month
+    return { from: fmtDate(first), to: fmtDate(last) };
+  }
+
+  switch (period) {
+    case 'today':
+      return { from: fmtDate(now), to: fmtDate(now) };
+    case 'weekend': {
+      const day = now.getDay(); // 0=Sun … 6=Sat
+      const daysToFri = day <= 5 ? 5 - day : 6;
+      const fri = new Date(now); fri.setDate(now.getDate() + (daysToFri === 0 && day === 5 ? 0 : daysToFri));
+      const sun = new Date(fri); sun.setDate(fri.getDate() + 2);
+      return { from: fmtDate(fri), to: fmtDate(sun) };
+    }
+    case 'week': {
+      const end = new Date(now); end.setDate(now.getDate() + 6);
+      return { from: fmtDate(now), to: fmtDate(end) };
+    }
+    case 'next-week': {
+      const start = new Date(now); start.setDate(now.getDate() + 7);
+      const end = new Date(now); end.setDate(now.getDate() + 13);
+      return { from: fmtDate(start), to: fmtDate(end) };
+    }
+    case 'month': {
+      const end = new Date(now); end.setDate(now.getDate() + 30);
+      return { from: fmtDate(now), to: fmtDate(end) };
+    }
+    default:
+      return null; // all upcoming
+  }
+}
+
+/** YYYY-MM-DD → "Jun 2026" */
+export function fmtMonthLabel(d: string): string {
+  const [y, m] = d.split('-').map(Number);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${months[m - 1]} ${y}`;
+}
+
+/** YYYY-MM → prev/next month as "YYYY-MM" */
+export function prevMonth(ym: string): string {
+  const [y, m] = ym.split('-').map(Number);
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`;
+}
+export function nextMonth(ym: string): string {
+  const [y, m] = ym.split('-').map(Number);
+  return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+}
+
+/** Get the current month as "YYYY-MM" */
+export function currentMonth(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 /** Convert any string to a URL-safe slug */
 export function toSlug(s: string): string {
   return s
