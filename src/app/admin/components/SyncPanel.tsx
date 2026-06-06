@@ -63,8 +63,15 @@ export default function SyncPanel() {
   const [saving, setSaving] = useState(false);
 
   const loadSources = useCallback(async () => {
-    const res = await fetch('/api/scrape/sources');
-    setSources(await res.json());
+    try {
+      const res = await fetch('/api/scrape/sources');
+      if (!res.ok) { setLoading(false); return; }
+      const data = await res.json();
+      // API returns {error} on failure, or an array on success
+      if (Array.isArray(data)) setSources(data);
+    } catch (e) {
+      console.error('Failed to load sync sources:', e);
+    }
     setLoading(false);
   }, []);
 

@@ -110,7 +110,10 @@ export async function getDb(): Promise<Client> {
   if (!g._atxDbReady) {
     g._atxDbReady = initSchema(client)
       .then(() => migrateSlugColumns(client))
-      .then(() => migrateScrapeSourcesTable(client));
+      .then(() => migrateScrapeSourcesTable(client).catch((e) => {
+        // Don't let a migration error poison the singleton
+        console.error('[db] scrape_sources migration error:', e);
+      }));
   }
   await g._atxDbReady;
   return client;
