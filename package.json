@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "scrape": "node scripts/scrape-resound.mjs",
-    "scrape:insert": "node scripts/scrape-resound.mjs --insert"
+    "scrape:insert": "node scripts/scrape-resound.mjs --insert",
+    "enrich": "node scripts/enrich-artists.mjs",
+    "enrich:write": "node scripts/enrich-artists.mjs --write"
   },
   "dependencies": {
     "@libsql/client": "^0.17.3",
