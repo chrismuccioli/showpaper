@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { fmtDateGrid, fmt12, formatPrice, fmtDateLong, showUrl, artistUrl, venueUrl } from '@/lib/cities';
+import ShowPlayerButton from './ShowPlayerButton';
 
 export interface ShowGridItem {
   id: number;
@@ -28,13 +29,28 @@ export function ShowRow({ show }: { show: ShowGridItem }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '50px 80px 1fr 160px 110px', gap: '0 12px', padding: '8px 4px', borderBottom: '1px solid #eee', alignItems: 'start' }}
       className="result-row">
-      {/* Thumbnail */}
-      <Link href={showUrl(show.slug, show.id, show.artists, show.venue_name)} style={{ display: 'block', textDecoration: 'none' }}>
-        {headliner?.photo_url
-          ? <img src={headliner.photo_url} alt="" width={50} height={50} style={{ objectFit: 'cover', display: 'block', borderRadius: 5, width: 50, height: 50 }} />
-          : <div style={{ width: 50, height: 50, background: '#eee', borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 22 }}>♪</div>
-        }
-      </Link>
+      {/* Thumbnail with hover-play overlay */}
+      <div style={{ position: 'relative', width: 50, height: 50, flexShrink: 0 }} className="show-thumb">
+        <Link href={showUrl(show.slug, show.id, show.artists, show.venue_name)} style={{ display: 'block', textDecoration: 'none' }}>
+          {headliner?.photo_url
+            ? <img src={headliner.photo_url} alt="" width={50} height={50} style={{ objectFit: 'cover', display: 'block', borderRadius: 5, width: 50, height: 50 }} />
+            : <div style={{ width: 50, height: 50, background: '#eee', borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 22 }}>♪</div>
+          }
+        </Link>
+        {headliner?.spotify_id && (
+          <ShowPlayerButton
+            artistId={headliner.id}
+            artistName={headliner.name}
+            artistSlug={headliner.slug}
+            artistPhoto={headliner.photo_url}
+            spotifyId={headliner.spotify_id}
+            showId={show.id}
+            showSlug={show.slug}
+            venueName={show.venue_name}
+            showDate={show.date}
+          />
+        )}
+      </div>
       {/* Date */}
       <div>
         <div style={{ fontWeight: 'bold', lineHeight: 1.3 }}>{day}</div>
