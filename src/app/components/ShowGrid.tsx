@@ -52,7 +52,7 @@ export default function ShowGrid({ shows, venueFilter, venues }: {
           const supporting = show.artists.slice(1);
           const { day, mmdd } = fmtDateGrid(show.date);
           const price = formatPrice(show.price_min, show.price_max);
-          const isFree = show.price_min === 0 || show.price_min === null;
+          const isFree = show.price_min === 0;
 
           return (
             <div

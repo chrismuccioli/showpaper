@@ -228,8 +228,8 @@ export default async function ShowDetailPage({ params }: { params: Promise<{ id:
             )}
             <tr>
               <td style={{ padding: '3px 12px 3px 0', color: '#888', whiteSpace: 'nowrap' }}>price</td>
-              <td style={{ padding: '3px 0', color: priceLabel === 'Free' ? '#1a9900' : '#333' }}>
-                <strong>{priceLabel}</strong>
+              <td style={{ padding: '3px 0', color: priceLabel === 'free' ? '#1a9900' : '#333' }}>
+                <strong>{priceLabel || '—'}</strong>
               </td>
             </tr>
             {show.ticket_url && (

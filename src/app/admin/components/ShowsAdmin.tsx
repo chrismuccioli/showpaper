@@ -33,7 +33,8 @@ const emptyArtist = (): ArtistInput => ({
 });
 
 function formatPrice(min: number | null, max: number | null) {
-  if (min === 0 || min === null) return 'Free';
+  if (min === null) return '—'; // unknown
+  if (min === 0) return 'Free';
   if (max && max !== min) return `$${min}–$${max}`;
   return `$${min}`;
 }

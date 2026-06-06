@@ -103,7 +103,8 @@ export function fmt12(t: string | null): string {
 }
 
 export function formatPrice(min: number | null, max: number | null): string {
-  if (min === null || min === 0) return 'free';
+  if (min === null) return '';  // unknown price — don't display
+  if (min === 0) return 'free'; // explicitly free
   if (max && max !== min) return `$${min}–$${max}`;
   return `$${min}`;
 }
