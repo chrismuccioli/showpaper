@@ -107,3 +107,31 @@ export function formatPrice(min: number | null, max: number | null): string {
   if (max && max !== min) return `$${min}–$${max}`;
   return `$${min}`;
 }
+
+/** Convert any string to a URL-safe slug */
+export function toSlug(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')                // decompose accented chars
+    .replace(/[\u0300-\u036f]/g, '') // strip accent marks
+    .replace(/[^a-z0-9\s-]/g, '')   // remove non-alphanumeric
+    .trim()
+    .replace(/\s+/g, '-')           // spaces → hyphens
+    .replace(/-+/g, '-');            // collapse runs
+}
+
+/** URL helpers — use clean slugs with numeric ID fallback */
+export function showUrl(slug: string | null, id: number, artists: { name: string }[], venueName: string): string {
+  if (slug) return `/shows/${slug}`;
+  // Fallback: compute on-the-fly from data
+  const artistSlug = artists[0] ? toSlug(artists[0].name) : 'show';
+  return `/shows/${toSlug(artistSlug)}-at-${toSlug(venueName)}-${id}`;
+}
+
+export function artistUrl(slug: string | null, id: number, name: string): string {
+  return slug ? `/artists/${slug}` : `/artists/${id}`;
+}
+
+export function venueUrl(slug: string | null, id: number, name: string): string {
+  return slug ? `/venues/${slug}` : `/venues/${id}`;
+}

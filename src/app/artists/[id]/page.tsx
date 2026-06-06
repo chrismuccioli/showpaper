@@ -7,9 +7,13 @@ import { fmtDateShort, fmt12, formatPrice } from '@/lib/cities';
 
 export const dynamic = 'force-dynamic';
 
-async function getArtist(id: string) {
+async function getArtist(slug: string) {
   const db = await getDb();
-  const r = await db.execute({ sql: 'SELECT * FROM artists WHERE id = ?', args: [id] });
+  const isNumeric = /^\d+$/.test(slug);
+  const r = await db.execute({
+    sql: `SELECT * FROM artists WHERE ${isNumeric ? 'id' : 'slug'} = ?`,
+    args: [isNumeric ? Number(slug) : slug],
+  });
   if (!r.rows.length) return null;
   const a = r.rows[0];
   return {
@@ -45,8 +49,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function ArtistPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [artist, shows] = await Promise.all([getArtist(id), getShowsByArtist(id)]);
+  const artist = await getArtist(id);
   if (!artist) notFound();
+  const shows = await getShowsByArtist(String(artist.id));
 
   // JSON-LD: MusicGroup
   const jsonLd = {

@@ -66,10 +66,17 @@ async function initSchema(client: Client): Promise<void> {
   );
 }
 
+async function migrateSlugColumns(client: Client): Promise<void> {
+  // Add slug columns if not present (SQLite doesn't support IF NOT EXISTS on ALTER)
+  for (const table of ['artists', 'venues', 'shows'] as const) {
+    try { await client.execute(`ALTER TABLE ${table} ADD COLUMN slug TEXT`); } catch { /* already exists */ }
+  }
+}
+
 export async function getDb(): Promise<Client> {
   const client = getClient();
   if (!g._atxDbReady) {
-    g._atxDbReady = initSchema(client);
+    g._atxDbReady = initSchema(client).then(() => migrateSlugColumns(client));
   }
   await g._atxDbReady;
   return client;

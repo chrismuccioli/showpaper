@@ -4,17 +4,17 @@ import type { ShowGridItem } from '@/app/components/ShowGrid';
 
 const today = () => new Date().toISOString().split('T')[0];
 
-async function attachArtists(db: Awaited<ReturnType<typeof getDb>>, showRows: { id: number }[]): Promise<Record<number, { id: number; name: string; photo_url: string | null }[]>> {
+async function attachArtists(db: Awaited<ReturnType<typeof getDb>>, showRows: { id: number }[]): Promise<Record<number, { id: number; name: string; photo_url: string | null; slug: string | null }[]>> {
   if (!showRows.length) return {};
   const showIds = showRows.map((r) => r.id);
   const placeholders = showIds.map(() => '?').join(',');
   const artistsResult = await db.execute({
-    sql: `SELECT sa.show_id, sa.sort_order, a.id, a.name, a.photo_url
+    sql: `SELECT sa.show_id, sa.sort_order, a.id, a.name, a.photo_url, a.slug
           FROM show_artists sa JOIN artists a ON sa.artist_id = a.id
           WHERE sa.show_id IN (${placeholders}) ORDER BY sa.show_id, sa.sort_order ASC`,
     args: showIds,
   });
-  const map: Record<number, { id: number; name: string; photo_url: string | null }[]> = {};
+  const map: Record<number, { id: number; name: string; photo_url: string | null; slug: string | null }[]> = {};
   for (const r of artistsResult.rows) {
     const sid = Number(r['show_id']);
     if (!map[sid]) map[sid] = [];
@@ -22,6 +22,7 @@ async function attachArtists(db: Awaited<ReturnType<typeof getDb>>, showRows: { 
       id: Number(r['id']),
       name: String(r['name']),
       photo_url: r['photo_url'] ? String(r['photo_url']) : null,
+      slug: r['slug'] ? String(r['slug']) : null,
     });
   }
   return map;
@@ -31,8 +32,8 @@ async function attachArtists(db: Awaited<ReturnType<typeof getDb>>, showRows: { 
 export async function getShowsByCity(cityName: string, venueId?: string): Promise<ShowGridItem[]> {
   const db = await getDb();
   let sql = `
-    SELECT s.id, s.date, s.show_time, s.doors_time, s.price_min, s.price_max, s.ticket_url,
-           v.id as venue_id, v.name as venue_name
+    SELECT s.id, s.slug, s.date, s.show_time, s.doors_time, s.price_min, s.price_max, s.ticket_url,
+           v.id as venue_id, v.name as venue_name, v.slug as venue_slug
     FROM shows s JOIN venues v ON s.venue_id = v.id
     WHERE v.city = ? AND s.date >= ?
   `;
@@ -45,6 +46,7 @@ export async function getShowsByCity(cityName: string, venueId?: string): Promis
 
   const shows = rows.rows.map((r) => ({
     id: Number(r['id']),
+    slug: r['slug'] ? String(r['slug']) : null,
     date: String(r['date']),
     show_time: r['show_time'] ? String(r['show_time']) : null,
     doors_time: r['doors_time'] ? String(r['doors_time']) : null,
@@ -53,6 +55,7 @@ export async function getShowsByCity(cityName: string, venueId?: string): Promis
     ticket_url: r['ticket_url'] ? String(r['ticket_url']) : null,
     venue_id: Number(r['venue_id']),
     venue_name: String(r['venue_name']),
+    venue_slug: r['venue_slug'] ? String(r['venue_slug']) : null,
   }));
 
   const artistMap = await attachArtists(db, shows);
@@ -63,8 +66,8 @@ export async function getShowsByCity(cityName: string, venueId?: string): Promis
 export async function getShowsByVenue(venueId: string): Promise<ShowGridItem[]> {
   const db = await getDb();
   const rows = await db.execute({
-    sql: `SELECT s.id, s.date, s.show_time, s.doors_time, s.price_min, s.price_max, s.ticket_url,
-                 v.id as venue_id, v.name as venue_name
+    sql: `SELECT s.id, s.slug, s.date, s.show_time, s.doors_time, s.price_min, s.price_max, s.ticket_url,
+                 v.id as venue_id, v.name as venue_name, v.slug as venue_slug
           FROM shows s JOIN venues v ON s.venue_id = v.id
           WHERE s.venue_id = ? AND s.date >= ?
           ORDER BY s.date ASC, COALESCE(s.show_time, '23:59') ASC`,
@@ -73,13 +76,14 @@ export async function getShowsByVenue(venueId: string): Promise<ShowGridItem[]> 
   if (!rows.rows.length) return [];
 
   const shows = rows.rows.map((r) => ({
-    id: Number(r['id']), date: String(r['date']),
+    id: Number(r['id']), slug: r['slug'] ? String(r['slug']) : null, date: String(r['date']),
     show_time: r['show_time'] ? String(r['show_time']) : null,
     doors_time: r['doors_time'] ? String(r['doors_time']) : null,
     price_min: r['price_min'] != null ? Number(r['price_min']) : null,
     price_max: r['price_max'] != null ? Number(r['price_max']) : null,
     ticket_url: r['ticket_url'] ? String(r['ticket_url']) : null,
     venue_id: Number(r['venue_id']), venue_name: String(r['venue_name']),
+    venue_slug: r['venue_slug'] ? String(r['venue_slug']) : null,
   }));
 
   const artistMap = await attachArtists(db, shows);
@@ -90,8 +94,8 @@ export async function getShowsByVenue(venueId: string): Promise<ShowGridItem[]> 
 export async function getShowsByArtist(artistId: string): Promise<ShowGridItem[]> {
   const db = await getDb();
   const rows = await db.execute({
-    sql: `SELECT s.id, s.date, s.show_time, s.doors_time, s.price_min, s.price_max, s.ticket_url,
-                 v.id as venue_id, v.name as venue_name
+    sql: `SELECT s.id, s.slug, s.date, s.show_time, s.doors_time, s.price_min, s.price_max, s.ticket_url,
+                 v.id as venue_id, v.name as venue_name, v.slug as venue_slug
           FROM shows s
           JOIN venues v ON s.venue_id = v.id
           JOIN show_artists sa ON s.id = sa.show_id
@@ -102,13 +106,14 @@ export async function getShowsByArtist(artistId: string): Promise<ShowGridItem[]
   if (!rows.rows.length) return [];
 
   const shows = rows.rows.map((r) => ({
-    id: Number(r['id']), date: String(r['date']),
+    id: Number(r['id']), slug: r['slug'] ? String(r['slug']) : null, date: String(r['date']),
     show_time: r['show_time'] ? String(r['show_time']) : null,
     doors_time: r['doors_time'] ? String(r['doors_time']) : null,
     price_min: r['price_min'] != null ? Number(r['price_min']) : null,
     price_max: r['price_max'] != null ? Number(r['price_max']) : null,
     ticket_url: r['ticket_url'] ? String(r['ticket_url']) : null,
     venue_id: Number(r['venue_id']), venue_name: String(r['venue_name']),
+    venue_slug: r['venue_slug'] ? String(r['venue_slug']) : null,
   }));
 
   const artistMap = await attachArtists(db, shows);

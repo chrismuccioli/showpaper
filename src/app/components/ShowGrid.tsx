@@ -1,8 +1,9 @@
 import Link from 'next/link';
-import { fmtDateGrid, fmt12, formatPrice } from '@/lib/cities';
+import { fmtDateGrid, fmt12, formatPrice, showUrl, artistUrl, venueUrl } from '@/lib/cities';
 
 export interface ShowGridItem {
   id: number;
+  slug: string | null;
   date: string;
   show_time: string | null;
   doors_time: string | null;
@@ -11,7 +12,8 @@ export interface ShowGridItem {
   ticket_url: string | null;
   venue_id: number;
   venue_name: string;
-  artists: { id: number; name: string; photo_url: string | null }[];
+  venue_slug: string | null;
+  artists: { id: number; name: string; photo_url: string | null; slug: string | null }[];
 }
 
 export default function ShowGrid({ shows, venueFilter, venues }: {
@@ -66,7 +68,7 @@ export default function ShowGrid({ shows, venueFilter, venues }: {
               className="result-row"
             >
               {/* Thumbnail */}
-              <Link href={`/shows/${show.id}`} style={{ display: 'block', textDecoration: 'none' }}>
+              <Link href={showUrl(show.slug, show.id, show.artists, show.venue_name)} style={{ display: 'block', textDecoration: 'none' }}>
                 {headliner?.photo_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -91,7 +93,7 @@ export default function ShowGrid({ shows, venueFilter, venues }: {
               {/* Artists */}
               <div style={{ lineHeight: 1.5 }}>
                 {headliner ? (
-                  <Link href={`/artists/${headliner.id}`} style={{ fontWeight: 'bold', color: '#00E' }}>
+                  <Link href={artistUrl(headliner.slug, headliner.id, headliner.name)} style={{ fontWeight: 'bold', color: '#00E' }}>
                     {headliner.name}
                   </Link>
                 ) : (
@@ -102,7 +104,7 @@ export default function ShowGrid({ shows, venueFilter, venues }: {
                     {', '}
                     {supporting.map((a, i) => (
                       <span key={a.id}>
-                        <Link href={`/artists/${a.id}`} style={{ color: '#444' }}>{a.name}</Link>
+                        <Link href={artistUrl(a.slug, a.id, a.name)} style={{ color: '#444' }}>{a.name}</Link>
                         {i < supporting.length - 1 ? ', ' : ''}
                       </span>
                     ))}
@@ -112,7 +114,7 @@ export default function ShowGrid({ shows, venueFilter, venues }: {
 
               {/* Venue + price */}
               <div>
-                <Link href={`/venues/${show.venue_id}`} style={{ color: '#00E', lineHeight: 1.3, display: 'block' }}>
+                <Link href={venueUrl(show.venue_slug, show.venue_id, show.venue_name)} style={{ color: '#00E', lineHeight: 1.3, display: 'block' }}>
                   {show.venue_name}
                 </Link>
                 <div style={{ fontSize: 13, color: isFree ? '#090' : '#666', marginTop: 2 }}>{price}</div>
@@ -142,7 +144,7 @@ export default function ShowGrid({ shows, venueFilter, venues }: {
                   <div style={{ height: 30, marginBottom: 4 }} />
                 )}
                 <Link
-                  href={`/shows/${show.id}`}
+                  href={showUrl(show.slug, show.id, show.artists, show.venue_name)}
                   style={{
                     display: 'block', background: '#eee', color: '#551A8B',
                     padding: '3px 6px', fontSize: 12, textAlign: 'right',

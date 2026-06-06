@@ -6,13 +6,15 @@ import { fmt12, fmtDateLong, formatPrice } from '@/lib/cities';
 
 export const dynamic = 'force-dynamic';
 
-async function getShow(id: string) {
+async function getShow(slug: string) {
   const db = await getDb();
+  // Support both clean slugs and legacy numeric IDs
+  const isNumeric = /^\d+$/.test(slug);
   const showResult = await db.execute({
     sql: `SELECT s.*, v.id as venue_id, v.name as venue_name, v.address as venue_address,
                  v.website as venue_website, v.city as venue_city
-          FROM shows s JOIN venues v ON s.venue_id = v.id WHERE s.id = ?`,
-    args: [id],
+          FROM shows s JOIN venues v ON s.venue_id = v.id WHERE ${isNumeric ? 's.id' : 's.slug'} = ?`,
+    args: [isNumeric ? Number(slug) : slug],
   });
   if (!showResult.rows.length) return null;
 
@@ -21,7 +23,7 @@ async function getShow(id: string) {
     sql: `SELECT a.id, a.name, a.photo_url, a.preview_url, a.spotify_id, a.bandcamp_url, sa.sort_order
           FROM show_artists sa JOIN artists a ON sa.artist_id = a.id
           WHERE sa.show_id = ? ORDER BY sa.sort_order ASC`,
-    args: [id],
+    args: [r['id']],  // use actual show ID (slug lookup may differ from param)
   });
 
   return {

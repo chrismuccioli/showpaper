@@ -10,7 +10,10 @@
     "scrape": "node scripts/scrape-resound.mjs",
     "scrape:insert": "node scripts/scrape-resound.mjs --insert",
     "enrich": "node scripts/enrich-artists.mjs",
-    "enrich:write": "node scripts/enrich-artists.mjs --write"
+    "enrich:write": "node scripts/enrich-artists.mjs --write",
+    "slugs": "node scripts/generate-slugs.mjs",
+    "cleanup": "node scripts/cleanup-data.mjs",
+    "cleanup:write": "node scripts/cleanup-data.mjs --write"
   },
   "dependencies": {
     "@libsql/client": "^0.17.3",

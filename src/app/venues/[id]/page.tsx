@@ -7,9 +7,13 @@ import { fmtDateShort, fmt12, formatPrice } from '@/lib/cities';
 
 export const dynamic = 'force-dynamic';
 
-async function getVenue(id: string) {
+async function getVenue(slug: string) {
   const db = await getDb();
-  const r = await db.execute({ sql: 'SELECT * FROM venues WHERE id = ?', args: [id] });
+  const isNumeric = /^\d+$/.test(slug);
+  const r = await db.execute({
+    sql: `SELECT * FROM venues WHERE ${isNumeric ? 'id' : 'slug'} = ?`,
+    args: [isNumeric ? Number(slug) : slug],
+  });
   if (!r.rows.length) return null;
   const v = r.rows[0];
   return {
@@ -39,9 +43,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function VenuePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [venue, shows] = await Promise.all([getVenue(id), getShowsByVenue(id)]);
+  const venue = await getVenue(id);
   if (!venue) notFound();
-
+  const shows = await getShowsByVenue(String(venue.id));
   const mapsQuery = encodeURIComponent(venue.address ? `${venue.name}, ${venue.address}` : venue.name);
   // Derive city slug from city name
   const citySlug = venue.city.toLowerCase().replace(/\s+/g, '-');

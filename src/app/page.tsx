@@ -11,8 +11,8 @@ async function getShows(venueId?: string): Promise<ShowGridItem[]> {
   const today = new Date().toISOString().split('T')[0];
 
   let sql = `
-    SELECT s.id, s.date, s.show_time, s.doors_time, s.price_min, s.price_max, s.ticket_url,
-           v.id as venue_id, v.name as venue_name
+    SELECT s.id, s.slug, s.date, s.show_time, s.doors_time, s.price_min, s.price_max, s.ticket_url,
+           v.id as venue_id, v.name as venue_name, v.slug as venue_slug
     FROM shows s JOIN venues v ON s.venue_id = v.id
     WHERE s.date >= ?
   `;
@@ -26,21 +26,22 @@ async function getShows(venueId?: string): Promise<ShowGridItem[]> {
   const showIds = showsResult.rows.map((r) => Number(r['id']));
   const placeholders = showIds.map(() => '?').join(',');
   const artistsResult = await db.execute({
-    sql: `SELECT sa.show_id, sa.sort_order, a.id, a.name, a.photo_url
+    sql: `SELECT sa.show_id, sa.sort_order, a.id, a.name, a.photo_url, a.slug
           FROM show_artists sa JOIN artists a ON sa.artist_id = a.id
           WHERE sa.show_id IN (${placeholders}) ORDER BY sa.show_id, sa.sort_order ASC`,
     args: showIds,
   });
 
-  const artistsByShow: Record<number, { id: number; name: string; photo_url: string | null }[]> = {};
+  const artistsByShow: Record<number, { id: number; name: string; photo_url: string | null; slug: string | null }[]> = {};
   for (const r of artistsResult.rows) {
     const sid = Number(r['show_id']);
     if (!artistsByShow[sid]) artistsByShow[sid] = [];
-    artistsByShow[sid].push({ id: Number(r['id']), name: String(r['name']), photo_url: r['photo_url'] ? String(r['photo_url']) : null });
+    artistsByShow[sid].push({ id: Number(r['id']), name: String(r['name']), photo_url: r['photo_url'] ? String(r['photo_url']) : null, slug: r['slug'] ? String(r['slug']) : null });
   }
 
   return showsResult.rows.map((r) => ({
     id: Number(r['id']),
+    slug: r['slug'] ? String(r['slug']) : null,
     date: String(r['date']),
     show_time: r['show_time'] ? String(r['show_time']) : null,
     doors_time: r['doors_time'] ? String(r['doors_time']) : null,
@@ -49,6 +50,7 @@ async function getShows(venueId?: string): Promise<ShowGridItem[]> {
     ticket_url: r['ticket_url'] ? String(r['ticket_url']) : null,
     venue_id: Number(r['venue_id']),
     venue_name: String(r['venue_name']),
+    venue_slug: r['venue_slug'] ? String(r['venue_slug']) : null,
     artists: artistsByShow[Number(r['id'])] ?? [],
   }));
 }
