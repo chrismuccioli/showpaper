@@ -29,7 +29,14 @@ function loadEnv() {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
     const idx = trimmed.indexOf('=');
-    if (idx > 0) env[trimmed.slice(0, idx).trim()] = trimmed.slice(idx + 1).trim();
+    if (idx > 0) {
+      let val = trimmed.slice(idx + 1).trim();
+      // Strip surrounding quotes if present
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1);
+      }
+      env[trimmed.slice(0, idx).trim()] = val;
+    }
   }
   return env;
 }
