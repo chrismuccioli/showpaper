@@ -67,16 +67,50 @@ async function initSchema(client: Client): Promise<void> {
 }
 
 async function migrateSlugColumns(client: Client): Promise<void> {
-  // Add slug columns if not present (SQLite doesn't support IF NOT EXISTS on ALTER)
   for (const table of ['artists', 'venues', 'shows'] as const) {
     try { await client.execute(`ALTER TABLE ${table} ADD COLUMN slug TEXT`); } catch { /* already exists */ }
+  }
+}
+
+async function migrateScrapeSourcesTable(client: Client): Promise<void> {
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS scrape_sources (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      url TEXT NOT NULL UNIQUE,
+      source_type TEXT NOT NULL DEFAULT 'unknown',
+      city TEXT NOT NULL DEFAULT 'Austin',
+      timezone TEXT NOT NULL DEFAULT 'America/Chicago',
+      enabled INTEGER NOT NULL DEFAULT 1,
+      venue_id INTEGER,
+      venue_filter TEXT,
+      last_synced_at TEXT,
+      last_result TEXT,
+      last_error TEXT,
+      consecutive_failures INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'active',
+      auth_config TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+  // Seed the built-in Resound Presents source if not present
+  const existing = await client.execute(
+    `SELECT id FROM scrape_sources WHERE url = 'https://resoundpresents.com/'`
+  );
+  if (!existing.rows.length) {
+    await client.execute({
+      sql: `INSERT INTO scrape_sources (name, url, source_type, city, timezone) VALUES (?, ?, ?, ?, ?)`,
+      args: ['Resound Presents', 'https://resoundpresents.com/', 'resound', 'Austin', 'America/Chicago'],
+    });
   }
 }
 
 export async function getDb(): Promise<Client> {
   const client = getClient();
   if (!g._atxDbReady) {
-    g._atxDbReady = initSchema(client).then(() => migrateSlugColumns(client));
+    g._atxDbReady = initSchema(client)
+      .then(() => migrateSlugColumns(client))
+      .then(() => migrateScrapeSourcesTable(client));
   }
   await g._atxDbReady;
   return client;

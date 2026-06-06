@@ -19,13 +19,13 @@ async function uniqueSlug(db: Client, table: string, base: string, excludeId: nu
 
 // ── Venue upsert ─────────────────────────────────────────────────────────────
 
-async function getOrCreateVenue(db: Client, name: string, address: string | null): Promise<number> {
+async function getOrCreateVenue(db: Client, name: string, address: string | null, city: string): Promise<number> {
   const existing = await db.execute({ sql: 'SELECT id FROM venues WHERE name = ?', args: [name] });
   if (existing.rows.length) return Number(existing.rows[0]['id']);
 
   const r = await db.execute({
     sql: 'INSERT INTO venues (name, address, city) VALUES (?, ?, ?)',
-    args: [name, address, 'Austin'],
+    args: [name, address, city],
   });
   const id = Number(r.lastInsertRowid);
   const slug = await uniqueSlug(db, 'venues', toSlug(name), id);
@@ -131,11 +131,12 @@ async function showExists(db: Client, ticketUrl: string | null, date: string, ve
 export async function ingestShows(
   shows: ScrapedShow[],
   sourceName: string,
-  options: { enrichSpotify?: boolean } = {}
+  options: { enrichSpotify?: boolean; city?: string } = {}
 ): Promise<IngestResult> {
   const start = Date.now();
   const db = await getDb();
   const enrichSpotify = options.enrichSpotify ?? !!process.env.SPOTIFY_CLIENT_ID;
+  const city = options.city ?? 'Austin';
 
   let inserted = 0;
   let skipped = 0;
@@ -154,7 +155,7 @@ export async function ingestShows(
     try {
       // Venue
       const venuesBefore = (await db.execute('SELECT COUNT(*) as n FROM venues')).rows[0]['n'];
-      const venueId = await getOrCreateVenue(db, show.venueName, show.venueAddress);
+      const venueId = await getOrCreateVenue(db, show.venueName, show.venueAddress, city);
       const venuesAfter = (await db.execute('SELECT COUNT(*) as n FROM venues')).rows[0]['n'];
       if (Number(venuesAfter) > Number(venuesBefore)) venuesCreated++;
 
